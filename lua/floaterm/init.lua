@@ -128,6 +128,20 @@ M.open = function()
     end)
   )
 
+  if conf.auto_name then
+    state.name_update_timer = vim.uv.new_timer()
+    state.name_update_timer:start(
+      conf.auto_name_interval,
+      conf.auto_name_interval,
+      vim.schedule_wrap(function()
+        if state.volt_set and utils.update_terminal_names() then
+          volt_redraw(state.sidebuf, "bufs")
+          volt_redraw(state.barbuf, "bar")
+        end
+      end)
+    )
+  end
+
   vim.bo[state.sidebuf].ft = "FloatermSidebar"
 
   api.nvim_create_autocmd("WinClosed", {

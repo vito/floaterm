@@ -9,6 +9,7 @@ M.edit_name = function()
   if row then
     vim.ui.input({ prompt = "   Enter name: " }, function(input)
       state.terminals[row].name = input
+      state.terminals[row].manual_name = true
       vim.api.nvim_echo({}, false, {})
       volt_redraw(state.sidebuf, "bufs")
     end)

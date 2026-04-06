@@ -130,6 +130,62 @@ M.close_timers = function()
   state.bar_redraw_timer:stop()
   state.bar_redraw_timer:close()
   state.bar_redraw_timer = nil
+
+  if state.name_update_timer then
+    state.name_update_timer:stop()
+    state.name_update_timer:close()
+    state.name_update_timer = nil
+  end
+end
+
+--- Get the foreground command running in a terminal buffer.
+--- Returns the command name (e.g. "vim", "make") or nil.
+--- Linux only: reads /proc/{pid}/stat for the foreground process group.
+M.get_foreground_cmd = function(buf)
+  if not api.nvim_buf_is_valid(buf) then return nil end
+  if vim.bo[buf].buftype ~= "terminal" then return nil end
+
+  local bufname = api.nvim_buf_get_name(buf)
+  local pid = bufname:match("//(%d+):")
+  if not pid then return nil end
+
+  local f = io.open("/proc/" .. pid .. "/stat")
+  if not f then return nil end
+  local stat = f:read("*a")
+  f:close()
+
+  -- Field 8 of /proc/{pid}/stat is tpgid (foreground process group ID)
+  -- Fields: pid (comm) state ppid pgrp session tty_nr tpgid ...
+  -- Use %b() to skip comm which may contain spaces
+  local tpgid = stat:match("^%d+ %b() %S+ %S+ %S+ %S+ %S+ (%S+)")
+  if not tpgid or tonumber(tpgid) <= 0 then return nil end
+
+  local h = io.popen("ps -p " .. tpgid .. " -o comm= 2>/dev/null")
+  if not h then return nil end
+  local cmd = h:read("*a")
+  h:close()
+
+  cmd = cmd and cmd:gsub("%s+$", "")
+  if cmd == "" then return nil end
+  return cmd
+end
+
+--- Poll all terminals and update names based on foreground process.
+--- Returns true if any name changed.
+M.update_terminal_names = function()
+  if not state.terminals then return false end
+
+  local changed = false
+  for _, term in ipairs(state.terminals) do
+    if not term.manual_name then
+      local cmd = M.get_foreground_cmd(term.buf)
+      if cmd and cmd ~= term.name then
+        term.name = cmd
+        changed = true
+      end
+    end
+  end
+  return changed
 end
 
 return M

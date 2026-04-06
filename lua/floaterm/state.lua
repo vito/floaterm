@@ -17,6 +17,10 @@ local M = {
     terminals = {
       { name = "Terminal" },
     },
+
+    -- Auto-update terminal names based on foreground process (Linux only)
+    auto_name = true,
+    auto_name_interval = 2000,
   },
 }
 
