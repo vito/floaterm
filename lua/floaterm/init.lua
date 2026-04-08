@@ -116,7 +116,10 @@ M.open = function()
   volt_redraw(state.barbuf, "bar")
 
   require "floaterm.mappings"()
-  require "floaterm.hl"()
+
+  local hl = require "floaterm.hl"
+  hl.setup()
+  hl.apply()
 
   state.bar_redraw_timer = vim.uv.new_timer()
 
